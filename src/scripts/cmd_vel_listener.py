@@ -37,14 +37,33 @@
 ## to the 'chatter' topic
 
 import rospy
+import serial
 from geometry_msgs.msg import Twist
+from xbee import ZigBee
+
+xbee = None
+
+def print_data(data):
+    rospy.loginfo("Reseived xbee package:")
+    rospy.loginfo("%s" % data)
 
 def callback(msg):
     rospy.loginfo("Received a /cmd_vel message!")
     rospy.loginfo("Linear Components: [%f, %f, %f]"%(msg.linear.x, msg.linear.y, msg.linear.z))
     rospy.loginfo("Angular Components: [%f, %f, %f]"%(msg.angular.x, msg.angular.y, msg.angular.z))
+    xbee.tx(
+        dest_addr_long='\x00\x13\xA2\x00\x40\x31\x56\x46',
+        dest_addr = b'\x10\x52',
+        data=b'\x01',
+    )
+
     
 def listener():
+    global xbee
+
+    ser = serial.Serial('/dev/ttyUSB0', 9600)
+    xbee = ZigBee(ser, callback=print_data)
+
     # in ROS, nodes are unique named. If two nodes with the same
     # node are launched, the previous one is kicked off. The 
     # anonymous=True flag means that rospy will choose a unique
@@ -56,6 +75,9 @@ def listener():
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
+
+    xbee.halt()
+    ser.close()
         
 if __name__ == '__main__':
     listener()
