@@ -42,21 +42,45 @@ from geometry_msgs.msg import Twist
 from xbee import ZigBee
 
 xbee = None
+XBEE_ADDR_LONG = '\x00\x13\xA2\x00\x40\x31\x56\x46'
+XBEE_ADDR_SHORT = '\x10\x52'
 
 def print_data(data):
-    rospy.loginfo("Reseived xbee package:")
-    rospy.loginfo("%s" % data)
+    rospy.loginfo("XBee Response: %s" % data)
+
+def forward():
+    xbee.tx(
+        dest_addr_long = XBEE_ADDR_LONG,
+        dest_addr = XBEE_ADDR_SHORT,
+        data=b'\x01',
+    )
+
+def backward():
+    xbee.tx(
+        dest_addr_long = XBEE_ADDR_LONG,
+        dest_addr = XBEE_ADDR_SHORT,
+        data=b'\x02',
+    )
+
+def stop():
+    xbee.tx(
+        dest_addr_long = XBEE_ADDR_LONG,
+        dest_addr = XBEE_ADDR_SHORT,
+        data=b'\x03',
+    )
 
 def callback(msg):
     rospy.loginfo("Received a /cmd_vel message!")
     rospy.loginfo("Linear Components: [%f, %f, %f]"%(msg.linear.x, msg.linear.y, msg.linear.z))
     rospy.loginfo("Angular Components: [%f, %f, %f]"%(msg.angular.x, msg.angular.y, msg.angular.z))
-    xbee.tx(
-        dest_addr_long='\x00\x13\xA2\x00\x40\x31\x56\x46',
-        dest_addr = b'\x10\x52',
-        data=b'\x01',
-    )
-
+    
+    if msg.linear.x == 0 and msg.linear.y == 0 and msg.linear.z == 0:
+        stop()
+    elif msg.linear.x > 0 and msg.linear.y == 0 and msg.linear.z == 0:
+        forward()
+    elif msg.linear.x < 0 and msg.linear.y == 0 and msg.linear.z == 0:
+        backward()
+    
     
 def listener():
     global xbee
