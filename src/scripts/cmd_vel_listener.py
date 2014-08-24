@@ -38,6 +38,8 @@
 
 import rospy
 import serial
+import struct
+import binascii
 from geometry_msgs.msg import Twist
 from xbee import ZigBee
 
@@ -48,25 +50,37 @@ XBEE_ADDR_SHORT = '\x10\x52'
 def print_data(data):
     rospy.loginfo("XBee Response: %s" % data)
 
-def forward():
-    xbee.tx(
-        dest_addr_long = XBEE_ADDR_LONG,
-        dest_addr = XBEE_ADDR_SHORT,
-        data=b'\x01',
-    )
+def prepare_data(msg):
+    linear = 0;
+    angular = 0;
 
-def backward():
-    xbee.tx(
-        dest_addr_long = XBEE_ADDR_LONG,
-        dest_addr = XBEE_ADDR_SHORT,
-        data=b'\x02',
-    )
+    if msg.linear.x > 0:
+        linear = 1
+    elif msg.linear.x < 0:
+        linear = 2
 
-def stop():
+    if msg.angular.z > 0:
+        angular = 2
+    elif msg.angular.z < 0:
+        angular = 1
+
+    data = struct.pack('BBB', 1, linear, angular)
+    return data
+
+def cmd_vel_command(msg):
+    #a,b,c
+    #a = 1
+    #b = 1 - forward, b = -1 - backward
+    #c > 0 - turn right, c < 0 - turn left
+
+    data = prepare_data(msg)
+
+    rospy.loginfo("Sending: %s" % binascii.hexlify(data))
+
     xbee.tx(
         dest_addr_long = XBEE_ADDR_LONG,
         dest_addr = XBEE_ADDR_SHORT,
-        data=b'\x03',
+        data=data,
     )
 
 def callback(msg):
@@ -74,12 +88,7 @@ def callback(msg):
     rospy.loginfo("Linear Components: [%f, %f, %f]"%(msg.linear.x, msg.linear.y, msg.linear.z))
     rospy.loginfo("Angular Components: [%f, %f, %f]"%(msg.angular.x, msg.angular.y, msg.angular.z))
     
-    if msg.linear.x == 0 and msg.linear.y == 0 and msg.linear.z == 0:
-        stop()
-    elif msg.linear.x > 0 and msg.linear.y == 0 and msg.linear.z == 0:
-        forward()
-    elif msg.linear.x < 0 and msg.linear.y == 0 and msg.linear.z == 0:
-        backward()
+    cmd_vel_command(msg)
     
     
 def listener():
