@@ -33,9 +33,6 @@
 #
 # Revision $Id$
 
-## Simple talker demo that listens to std_msgs/Strings published 
-## to the 'chatter' topic
-
 import rospy
 import serial
 import struct
@@ -46,6 +43,8 @@ from xbee import ZigBee
 xbee = None
 XBEE_ADDR_LONG = '\x00\x13\xA2\x00\x40\x31\x56\x46'
 XBEE_ADDR_SHORT = '\x10\x52'
+DEVICE = '/dev/ttyUSB0'
+
 
 def print_data(data):
     rospy.loginfo("XBee Response: %s" % data)
@@ -94,7 +93,7 @@ def callback(msg):
 def listener():
     global xbee
 
-    ser = serial.Serial('/dev/ttyUSB0', 9600)
+    ser = serial.Serial(DEVICE, 9600)
     xbee = ZigBee(ser, callback=print_data)
 
     # in ROS, nodes are unique named. If two nodes with the same
